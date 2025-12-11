@@ -6,15 +6,15 @@ We aim to extend the current one-sorted definitions and theorems currently in [M
 ## Feedback welcome!
 
 We very much appreciate any feedback and comments, especially on the fundamental definitions `MSLanguage`, `MSStructure`, `Term`, `BoundedFormula`, and the current way dependent vectors are used and implemented in `SortedTuple` (more explanation below).
-Feel free to add any comments them to this [Lean Zulip](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/Many-sorted.20model.20theory) thread, which already includes some great suggestions. The goal is to find definitions which are convenient both for foundational development as well as actually doing model theory. 
+Feel free to add any comments them to this [Lean Zulip](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/Many-sorted.20model.20theory) thread, which already includes some great suggestions. The goal is to find definitions which are convenient both for foundational development as well as actually doing model theory.
 
 You can also contact us directly via our institutional emails: [Aaron Crighton](acrighto@fields.utoronto.ca), [John Nicholson](nichoj6@mcmaster.ca), [Mathias Stout](stoutm1@mcmaster.ca).
 
 
 ## Contributing
 
-As our end goal is to make formalization more accessible to the wider model theory community, we welcome any interested contributors. 
-However, as noted above, all definitions are still very much susceptible to change. 
+As our end goal is to make formalization more accessible to the wider model theory community, we welcome any interested contributors.
+However, as noted above, all definitions are still very much susceptible to change.
 Fixes, small upgrades and partial reworks are all welcome, but there is currently no blueprint towards building more advanced results, although there are some concrete plans for the near future: see `CONTRIBUTING.md`.
 
 - Examining more concrete examples (cf. `Examples.lean`).
@@ -25,13 +25,13 @@ Fixes, small upgrades and partial reworks are all welcome, but there is currentl
 
 ## Repository structure
 
-This repository is structured as follows:
+This repository consists of two main folders, `MultisortedLogic` and `ProdExpr`. Below is a summary of the files in the former folder. The latter addresses some of the issues mentioned below.
 
 - `Basic.lean`, `LanguageMap.lean`, `Syntax.lean`, `Semantics.lean` contain many-sorted analogues of the one-sorted definitions and theorems in Mathlib. The generalizations of these theorems provides a first basic test for the viability of the fundamental definitions.
 
 - `Fam.lean` contains general lemmas about families `S -> Type*`, where `S` is a fixed base type. Several lemmas on e.g. function decomposition and disjoint sums are given, generalizing their non-dependent counterparts.
 
-- `SortedTuple.lean` contains the definition of a 'sorted tuple', essentially representing a dependent vector. In more detail, given some `σ : List S`, and a dependent type `α : S -> Type*`, `SortedTuple σ α` represents a vector whose i-th entry has type `α σ[i]` (the set `S` will usually be the set of model-theoretic sorts). For more details and further comments, see below.
+- `SortedTuple.lean` in contains the definition of a 'sorted tuple', essentially representing a dependent vector. In more detail, given some `σ : List S`, and a dependent type `α : S -> Type*`, `SortedTuple σ α` represents a vector whose i-th entry has type `α σ[i]` (the set `S` will usually be the set of model-theoretic sorts). For more details and further comments, see below.
 
 - `Examples.lean` contains a mix of examples of statements about modules and vector spaces to both test the soundness and usability of the current definitions.
 
@@ -41,7 +41,7 @@ Below are descriptions of the current main definitions and their motivation, as 
 
 ### MSLanguage
 
-Mathematically, a many-sorted language on sorts $S$ consists of, for each tuple $(s_1,\ldots, s_n) \in S^n$ and each $s \in S$, a set 
+Mathematically, a many-sorted language on sorts $S$ consists of, for each tuple $(s_1,\ldots, s_n) \in S^n$ and each $s \in S$, a set
 - $\mathcal{F}_{(s_1,\ldots,s_n;s)}$, of *function symbols*,
 - $\mathcal{R}_{(s_1,\ldots, s_n)}$, of *relation symbols*.
 
@@ -62,7 +62,7 @@ The type `(n : ℕ) → Fin n → Sorts` could be a valid alternative.
 Mathematically, a many-sorted structure for some language $\mathcal{L}$ on a set of sorts $S$ consists of the following data:
 
 - A family of sets $(M_s)_{s \in S}$
-- For each $n \in \mathbb{N}$, each tuple $(s_1,\ldots,s_n) \in S^n$ and $s \in S$ 
+- For each $n \in \mathbb{N}$, each tuple $(s_1,\ldots,s_n) \in S^n$ and $s \in S$
     - functions $f^M \colon M_{s_1} \times \ldots M_{s_n} \to M_s$ for each symbol $f \in \mathcal{F}_{(s_1,\ldots,s_n;s)}$
     - n-ary relations $R^M \subseteq M_{s_1} \times \ldots M_{s_n}$ for each symbol $R \in \mathcal{R}_{(s_1,\ldots,s_n)}$
 
@@ -81,7 +81,7 @@ The dependent type `SortedTuple [s1,...,sn] M` represents a tuple $(s_1,\ldots,s
 ### Term
 
 Fix a family of variable symbols $V = (V_s)_{s \in S}$.
-A term $t$ in a language $\mathcal{L}$ of type $s$ and variables $V$ is either 
+A term $t$ in a language $\mathcal{L}$ of type $s$ and variables $V$ is either
 
  - a variable symbol $x \in V_s$
  - an application of function symbol $f \in \mathcal{F}_{(s_1,\ldots,s_n;s)}$ to terms $t_1,\ldots,t_n$, respectively of type $s_1, \ldots, s_n$.
@@ -138,15 +138,15 @@ Some notes:
 - When applying the rule `rel` to create a new `BoundedFormula` by applying a relation symbol to a tuple of terms, this tuple of terms is represented concretely as an object of type `(ts : (i : Fin σ'.length) →  (L.Term (α ⊕ₛ σ.toFam)` rather than `SortedTuple σ' (L.Term (α ⊕ₛ σ.toFam)` to avoid errors related to 'nested inductive datatypes'.
 
 - The universal quantifier quantifies away the last bounded variable, rather than the first. This is to remain morally consistent with the one-sorted code in Mathlib, where bounded variables are represented by `Fin n` and the universal quantifier quantifies away the variable indexed by `(n-1 : Fin n)`.
-    - In isolation, it would have been more convenient to replace the constructor `all` by 
+    - In isolation, it would have been more convenient to replace the constructor `all` by
     ```lean4
     all {σ s} (f : BoundedFormula α (s :: σ)) : BoundedFormula α σ`
-    ``` 
+    ```
 
 ### SortedTuple
 
 SortedTuples represent 'dependent vectors'.
-More precisely, given a base type `S : Type*`, a list `σ : List S` and a dependent type `α → Type*`, a `SortedTuple σ α` is a vector of length `σ.length` whose `i`-th entry has type `σ[i]`. 
+More precisely, given a base type `S : Type*`, a list `σ : List S` and a dependent type `α → Type*`, a `SortedTuple σ α` is a vector of length `σ.length` whose `i`-th entry has type `σ[i]`.
 The primary use of this structure is to be an intermediate point for the various possible formalizations of the concept of a 'dependent vector' (see below).
 
 It is currently implemented as a `List (Sigma α)` whose projection onto the first components is `σ`.
@@ -168,13 +168,13 @@ More importantly, one has functions to convert between a `SortedTuple σ α` and
 - A Pi type/dependent map: `(i : Fin σ.length) → α (σ.get i) ` (see `toMap`, `fromMap`)
 - A family of maps over a base type: `(s : S) → σ.toFam s → α s` (see definition of `toFam` above, also see `toFMap`, `fromFMap`)
 
-The structure `SortedTuple` has proven useful in converting between these representations in a principled way. 
+The structure `SortedTuple` has proven useful in converting between these representations in a principled way.
 However, there are still challenges to address:
 
 - Proving that operations defined using one representation act in a specific way on a different representation can be cumbersome (see e.g. the implementation and sorries surrounding `map` and `extend`)
-- Unfolding and simplification is not as smooth as for non-dependent vectors: compare the proofs in the `Examples.lean` file to those in Mathlib's ModelTheory\Algebra\Ring\Basic.lean and ModelTheory\Algebra\Field\Basic.lean. Finding the right auxiliary results/metaprogramming/alternative definitions to make most of these proofs immediate is the first main goal, before building more advanced results on possibly unstable foundations. 
+- Unfolding and simplification is not as smooth as for non-dependent vectors: compare the proofs in the `Examples.lean` file to those in Mathlib's ModelTheory\Algebra\Ring\Basic.lean and ModelTheory\Algebra\Field\Basic.lean. Finding the right auxiliary results/metaprogramming/alternative definitions to make most of these proofs immediate is the first main goal, before building more advanced results on possibly unstable foundations.
 - The name 'sorted tuple' is inspired by our specific use case, though 'dependent vectors' might be a better and more general name. We expect that definitions and lemmas related to these objects might also be present in other projects, and we appreciate any pointers.
-- It is entirely plausible that all of the definitions mentioned in this readme can be improved. Feel free to add to the discussion on [Zulip](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/Many-sorted.20model.20theory). We are interested in comparing these different ideas and especially appreciate any comments that indicate precisely how alternative approaches can fix current issues (without breaking too many other things). 
+- It is entirely plausible that all of the definitions mentioned in this readme can be improved. Feel free to add to the discussion on [Zulip](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/Many-sorted.20model.20theory). We are interested in comparing these different ideas and especially appreciate any comments that indicate precisely how alternative approaches can fix current issues (without breaking too many other things).
 
 
 ## References
@@ -184,4 +184,3 @@ The files `Basic.Lean`, `LanguageMap.lean`, `Syntax.lean` and `Semantics.lean` a
 - [J. Han, F. van Doorn, *A formal proof of the independence of the continuum hypothesis*](https://flypitch.github.io/papers/)
 - [J. Han, F. van Doorn, *A formalization of forcing and the unprovability of
   the continuum hypothesis*](https://flypitch.github.io/papers/)
-
