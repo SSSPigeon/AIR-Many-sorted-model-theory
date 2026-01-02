@@ -6,9 +6,9 @@ We aim to extend the current one-sorted definitions and theorems currently in [M
 ## Feedback welcome!
 
 We very much appreciate any feedback and comments, especially on the fundamental definitions `MSLanguage`, `MSStructure`, `Term`, `BoundedFormula`.
-Feel free to add any comments them to this [Lean Zulip](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/Many-sorted.20model.20theory) thread, which already includes some great suggestions. The goal is to find definitions which are convenient both for foundational development as well as actually doing model theory.
+Feel free to add any comments to this [Lean Zulip](https://leanprover.zulipchat.com/#narrow/channel/287929-mathlib4/topic/Many-sorted.20model.20theory) thread, which already includes some great suggestions. The goal is to find definitions which are convenient both for foundational development as well as actually doing model theory.
 
-You can also contact us directly via our institutional emails: [Aaron Crighton](acrighto@fields.utoronto.ca), [John Nicholson](nichoj6@mcmaster.ca), [Mathias Stout](stoutm1@mcmaster.ca).
+You can also contact us directly via our institutional emails: [Aaron Crighton](mailto:acrighto@fields.utoronto.ca), [John Nicholson](mailto:nichoj6@mcmaster.ca), [Mathias Stout](mailto:stoutm1@mcmaster.ca).
 
 
 ## Contributing
@@ -20,15 +20,15 @@ Fixes, small upgrades and partial reworks are all welcome, but there is currentl
 ## Repository structure
 
 This repository consists of two main folders, `MultisortedLogic` and `ProdExpr`.
-The folder `Multisortedlogic` contains a more naive first approach on which the `ProdExpr` folder iterates, based on a suggestion by Adam Topaz.
+The folder `MultisortedLogic` contains a more naive first approach on which the `ProdExpr` folder iterates, based on a suggestion by Adam Topaz.
 
-The main differences between both approaches is explained below.
+The main differences between both approaches are explained below.
 
 ### MultisortedLogic
 
 This approach can be summarized as taking the existing Mathlib definitions and generalizing them to a dependent setting.
 
-A many sorted language `L` over a a type `Sorts` consists of a collection of function and relation symbols for each `List Sorts`. Here the type `Sorts` represents the different model-theoretic sorts of the language, a notion entirely orthogonal to Lean's `Sort u`.
+A many sorted language `L` over a type `Sorts` consists of a collection of function and relation symbols for each `List Sorts`. Here the type `Sorts` represents the different model-theoretic sorts of the language, a notion entirely orthogonal to Lean's `Sort u`.
 
 Terms and formulas are built up as usual by a set of inductive rules. In particular, a term in a family of variables (names) `\alpha : Sorts \to Type*` and is formalized as follows
 
@@ -48,7 +48,7 @@ However, by passing a dependent type `((i : Fin σ.length) → L.Term α (σ.get
 
 ### ProdExpr
 
-The two fundamental differences with the `Multisorted` were suggested by Adam Topaz on Zulip, and are as follows
+The two fundamental differences with the `MultisortedLogic` were suggested by Adam Topaz on Zulip, and are as follows
 
 First, instead of describing the signature of function and relation symbols by lists, we use a type `ProdExpr`, representing a nonassociative "product expression" over a type `S`.
 
