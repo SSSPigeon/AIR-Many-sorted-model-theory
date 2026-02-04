@@ -5,7 +5,9 @@ Based on the corresponding Mathlib file Mathlib\ModelTheory\LanguageMap.lean
 which was authored by 2021 Aaron Anderson, Jesse Michael Han, Floris van Doorn,
 and is released under the Apache 2.0 license.
 
-References for the Flypitch project:
+## References
+
+For the Flypitch project:
 - [J. Han, F. van Doorn, *A formal proof of the independence of the continuum hypothesis*]
   [flypitch_cpp]
 - [J. Han, F. van Doorn, *A formalization of forcing and the unprovability of
@@ -22,7 +24,7 @@ variable {Sorts : Type z} (L : MSLanguage.{u, v, z} Sorts) (L' : MSLanguage.{u',
 variable {M : Sorts → Type w} [L.MSStructure M]
 
 
-variable (σ : ProdExpr Sorts)
+variable (σ : Signature Sorts)
 /-- A language homomorphism maps the symbols of one language to symbols of another. -/
 structure LHom where
   /-- The mapping of functions -/
@@ -34,7 +36,7 @@ structure LHom where
 
 --@[inherit_doc FirstOrder.Language.LHom]
 infixl:10 " →ᴸ " => LHom
--- \^L
+-- \ [^] L
 
 variable {L L'}
 
@@ -92,7 +94,7 @@ def comp (g : L' →ᴸ L'') (f : L →ᴸ L') : L →ᴸ L'' :=
 -- added ᴸ to avoid clash with function composition
 @[inherit_doc]
 local infixl:60 " ∘ᴸ " => LHom.comp
--- \^L
+-- \ [^] L
 
 @[simp]
 theorem id_comp (F : L →ᴸ L') : LHom.id L' ∘ᴸ F = F := by
@@ -155,8 +157,10 @@ end SumMap
 
 /-- A language homomorphism is injective when all the maps between symbol types are. -/
 protected structure Injective : Prop where
-  onFunction {σ : ProdExpr Sorts} {t} : Function.Injective fun f : L.Functions σ t => onFunction ϕ f
-  onRelation {σ : ProdExpr Sorts} : Function.Injective fun R : L.Relations σ => onRelation ϕ R
+  onFunction {σ : Signature Sorts} {t} :
+    Function.Injective fun f : L.Functions σ t => onFunction ϕ f
+  onRelation {σ : Signature Sorts} :
+    Function.Injective fun R : L.Relations σ => onRelation ϕ R
 
 
 /-- Pulls an `L`-structure along a language map `ϕ : L →ᴸ L'`, and then expands it
@@ -177,21 +181,21 @@ noncomputable def defaultExpansion (ϕ : L →ᴸ L')
 all symbols on that structure. -/
 class IsExpansionOn (M : Sorts → Type*) [L.MSStructure M] [L'.MSStructure M] : Prop where
   map_onFunction :
-    ∀ {σ t} (f : L.Functions σ t) (x : σ.Interpret M),
+    ∀ {σ t} (f : L.Functions σ t) (x : M [^] σ),
     funMap (ϕ.onFunction f) x = funMap f x := by
       exact fun {n} => isEmptyElim
   map_onRelation :
-    ∀ {σ} (R : L.Relations σ) (x : σ.Interpret M), RelMap (ϕ.onRelation R) x = RelMap R x := by
+    ∀ {σ} (R : L.Relations σ) (x : M [^] σ), RelMap (ϕ.onRelation R) x = RelMap R x := by
       exact fun {n} => isEmptyElim
 
 @[simp]
 theorem map_onFunction {M : Sorts → Type*} [L.MSStructure M] [L'.MSStructure M]
-    [ϕ.IsExpansionOn M] {σ} {t} (f : L.Functions σ t) (x : σ.Interpret M) :
+    [ϕ.IsExpansionOn M] {σ} {t} (f : L.Functions σ t) (x : M [^] σ) :
     funMap (ϕ.onFunction f) x = funMap f x := IsExpansionOn.map_onFunction f x
 
 @[simp]
 theorem map_onRelation {M : Sorts → Type*} [L.MSStructure M] [L'.MSStructure M]
-    [ϕ.IsExpansionOn M] {σ} (R : L.Relations σ) (x : σ.Interpret M) :
+    [ϕ.IsExpansionOn M] {σ} (R : L.Relations σ) (x : M [^] σ) :
     RelMap (ϕ.onRelation R) x = RelMap R x := IsExpansionOn.map_onRelation R x
 
 instance id_isExpansionOn (M : Sorts → Type*) [L.MSStructure M] : IsExpansionOn (LHom.id L) M :=
@@ -222,14 +226,14 @@ instance sumInr_isExpansionOn (M : Sorts → Type*) [L.MSStructure M] [L'.MSStru
 @[simp]
 theorem funMap_sumInl [(L.sum L').MSStructure M]
     [(LHom.sumInl : L →ᴸ L.sum L').IsExpansionOn M] {σ} {t}
-    {f : L.Functions σ t} {x : σ.Interpret M} :
+    {f : L.Functions σ t} {x : M [^] σ} :
     @funMap Sorts (L.sum L') M _ σ t (Sum.inl f) x = funMap f x :=
   (LHom.sumInl : L →ᴸ L.sum L').map_onFunction f x
 
 @[simp]
 theorem funMap_sumInr [(L'.sum L).MSStructure M]
     [(LHom.sumInr : L →ᴸ L'.sum L).IsExpansionOn M] {σ} {t}
-    {f : L.Functions σ t} {x : σ.Interpret M} :
+    {f : L.Functions σ t} {x : M [^] σ} :
     @funMap Sorts (L'.sum L) M _ σ t (Sum.inr f) x = funMap f x :=
   (LHom.sumInr : L →ᴸ L'.sum L).map_onFunction f x
 
@@ -305,7 +309,7 @@ variable (α : Sorts → Type u')
 
 /-- The type of functions for a Multisorted language consisting only of constant symbols. -/
 @[simp]
-def constantsOnFunc : (σ : ProdExpr Sorts) → (t : Sorts) → Type u'
+def constantsOnFunc : (σ : Signature Sorts) → (t : Sorts) → Type u'
   | .nil, t => α t
   | _,  _ => PEmpty
 
@@ -323,7 +327,7 @@ instance isAlgebraic_constantsOn : IsAlgebraic (constantsOn α) := by
   unfold constantsOn
   infer_instance
 
-instance isEmpty_functions_constantsOn_prod {σ τ : ProdExpr Sorts} {t : Sorts} :
+instance isEmpty_functions_constantsOn_prod {σ τ : Signature Sorts} {t : Sorts} :
     IsEmpty ((constantsOn α).Functions (σ.prod τ) t) :=
   inferInstanceAs (IsEmpty PEmpty)
 
@@ -409,6 +413,7 @@ def withConstants : MSLanguage.{max u w', v} Sorts :=
 @[inherit_doc MSFirstOrder.MSLanguage.withConstants]
 scoped[MSFirstOrder] notation:95 L "[[" α "]]" => MSLanguage.withConstants L α
 
+
 /- TODO: prove this
 @[simp]
 theorem card_withConstants :
@@ -459,14 +464,14 @@ variable {α} {β : Sorts → Type*}
 
 @[simp]
 theorem withConstants_funMap_sumInl [L[[α]].MSStructure M] [(lhomWithConstants L α).IsExpansionOn M]
-    {σ} {t} {f : L.Functions σ t} {x : σ.Interpret M} :
+    {σ} {t} {f : L.Functions σ t} {x : M [^] σ} :
     @funMap _ (L[[α]]) M _ σ t (Sum.inl f) x = funMap f x :=
   (lhomWithConstants L α).map_onFunction f x
 
 
 @[simp]
 theorem withConstants_relMap_sumInl [L[[α]].MSStructure M] [(lhomWithConstants L α).IsExpansionOn M]
-    {σ} {R : L.Relations σ} {x : σ.Interpret M} :
+    {σ} {R : L.Relations σ} {x : M [^] σ} :
     @RelMap _ (L[[α]]) M _ σ (Sum.inl R) x = RelMap R x :=
   (lhomWithConstants L α).map_onRelation R x
 
@@ -512,7 +517,7 @@ instance addConstants_expansion {L' : MSLanguage Sorts} [L'.MSStructure M] (φ :
 
 
 @[simp]
-theorem withConstants_funMap_sumInr {s : Sorts} {a : α s} {x : ProdExpr.nil.Interpret M} :
+theorem withConstants_funMap_sumInr {s : Sorts} {a : α s} {x : Signature.nil.Interpret M} :
     @funMap _ (L[[α]]) M _ _ _ (Sum.inr a : L[[α]].Functions .nil s) x = L.con s a := by
   rw [Unique.eq_default x]
   exact (LHom.sumInr : constantsOn α →ᴸ L.sum _).map_onFunction _ _
@@ -535,7 +540,5 @@ instance map_constants_inclusion_isExpansionOn :
   LHom.sumMap_isExpansionOn _ _ _
 
 end WithConstants
-
 end MSLanguage
-
 end MSFirstOrder

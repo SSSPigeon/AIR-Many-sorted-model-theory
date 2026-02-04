@@ -19,7 +19,7 @@ universe u v u' v' w w' z z'
 open Cardinal
 
 namespace MSFirstOrder
-open ProdExpr
+open Signature
 
 /-Note: building on top of lists is technically more convenient.
   It would also be possible to build a language on top of a "ListLike",
@@ -28,8 +28,8 @@ open ProdExpr
 section LanguageDefs
 @[ext]
 structure MSLanguage (S : Type z) where
-  Functions : ProdExpr S → S → Type u
-  Relations : ProdExpr S → Type v
+  Functions : Signature S → S → Type u
+  Relations : Signature S → Type v
 
 namespace MSLanguage
 
@@ -55,7 +55,7 @@ lemma Empty_functions_imp_relational (L : MSLanguage S)
 
 instance : @IsAlgebraic.{0,0,z} S MSLanguage.empty :=
  by
-  have it: (∀ (σ : ProdExpr S), MSLanguage.empty.Relations σ = Empty)
+  have it: (∀ (σ : Signature S), MSLanguage.empty.Relations σ = Empty)
   := by simp
   exact Empty_relations_imp_algebraic _ it
 
@@ -81,37 +81,16 @@ def card : Cardinal :=
 
 variable {L} {L' : MSLanguage.{u', v', z} S}
 
---TODO: this should rather follow from some Mathlib lemma
-lemma card_plus_eq (a b c d : Cardinal.{u}) (h1 : a = c) (h2 : b = d) :
-    a + b = c + d := by rw [h1, h2]
-
-lemma lift_helper.{a, b, c} (ι : Type a) (f : ι → Cardinal.{b}) :
-   (sum fun i ↦ lift.{max c a, b} (f i)) = sum fun i ↦ lift.{c, b} (f i) := by
-  classical
-  -- cancel a `lift.{a}` after making both sides equal under that lift
-  apply (lift_injective.{a})
-  change
-    lift.{a} (sum (fun i ↦ lift.{max a c} (f i))) =
-    lift.{a} (sum (fun i ↦ lift.{c} (f i)))
-  -- push lift through sum, then merge lifts pointwise
-  --   lift (sum g) = sum (fun i => lift (g i))         [lift_sum]
-  --   lift (lift x) = lift x with max of universes     [lift_lift]
-  -- and simplify max-arithmetic
-  simp
-
---TODO: remove non-terminal simp
+--New: simplified this lemma by removing helpers and making Cardinal lifts more explicit in
+--by adding z (universe level of Sorts) to the lifts on the right. They are redundant but useful for
+--proving.
 theorem card_eq_card_functions_add_card_relations :
     L.card =
-      (Cardinal.sum fun σ => Cardinal.sum fun t => Cardinal.lift.{v, u} #(L.Functions σ t)) +
-        (Cardinal.sum fun σ'  => Cardinal.lift.{u, v} #(L.Relations σ')) := by
+      (Cardinal.sum fun σ => Cardinal.sum fun t => Cardinal.lift.{max v z, u} #(L.Functions σ t)) +
+        (Cardinal.sum fun σ'  => Cardinal.lift.{max u z, v} #(L.Relations σ')) := by
   unfold card Symbols
-  simp only [mk_sum, mk_sigma, lift_sum]
-  apply card_plus_eq
-  · apply congr
-    · simp
-    funext σ
-    apply lift_helper
-  · apply lift_helper
+  repeat rw[mk_sum, mk_sigma, lift_sum]
+  simp
 
 instance isRelational_sum [L.IsRelational] [L'.IsRelational] : IsRelational (L.sum L') :=
   fun _ _ => instIsEmptySum
@@ -122,7 +101,6 @@ instance isAlgebraic_sum [L.IsAlgebraic] [L'.IsAlgebraic] : IsAlgebraic (L.sum L
 instance isEmpty_empty : IsEmpty (@MSLanguage.empty S).Symbols := by
   simp only [MSLanguage.Symbols, isEmpty_sum, isEmpty_sigma]
   unfold MSLanguage.empty
-  simp only
   constructor
   · exact fun _ => inferInstance
   · exact inferInstance
@@ -137,13 +115,13 @@ instance Countable.countable_functions [h : Countable L.Symbols] :
   @Function.Injective.countable _ _ h _ Sum.inl_injective
 
 @[simp]
-theorem card_functions_sum (σ : ProdExpr S) (t : S) :
+theorem card_functions_sum (σ : Signature S) (t : S) :
     #((L.sum L').Functions σ t) =
     (Cardinal.lift.{u'} #(L.Functions σ t) + Cardinal.lift.{u} #(L'.Functions σ t) : Cardinal) := by
   simp [MSLanguage.sum]
 
 @[simp]
-theorem card_relations_sum (σ : ProdExpr S) :
+theorem card_relations_sum (σ : Signature S) :
     #((L.sum L').Relations σ) =
       Cardinal.lift.{v'} #(L.Relations σ) + Cardinal.lift.{v} #(L'.Relations σ) := by
   simp [MSLanguage.sum]
@@ -156,12 +134,12 @@ theorem card_sum {L' : MSLanguage.{u', v', z} S} :
     add_comm (Cardinal.sum fun σ => Cardinal.sum fun i => (#(L'.Functions σ i)).lift)]
 
 /-- Passes decidableEq instance through functions, cf. 1-sorted case -/
-instance instDecidableEqFunctions {S : Type z} {f : ProdExpr S → S → Type*}
-    {R : ProdExpr S → Type*} (σ : ProdExpr S) (t : S) [DecidableEq (f σ t)] :
+instance instDecidableEqFunctions {S : Type z} {f : Signature S → S → Type*}
+    {R : Signature S → Type*} (σ : Signature S) (t : S) [DecidableEq (f σ t)] :
     DecidableEq ((⟨f, R⟩ : MSLanguage S).Functions σ t) := inferInstance
 
-instance instDecidableEqRelations {S : Type z} {f : ProdExpr S → S → Type*}
-     {R : ProdExpr S → Type*} (σ : ProdExpr S) [DecidableEq (R σ)] :
+instance instDecidableEqRelations {S : Type z} {f : Signature S → S → Type*}
+     {R : Signature S → Type*} (σ : Signature S) [DecidableEq (R σ)] :
     DecidableEq ((⟨f, R⟩ : MSLanguage S).Relations σ) := inferInstance
 
 end MSLanguage
@@ -174,16 +152,16 @@ section StructureDefs
 
 @[ext]
 class MSStructure {S} (L : MSLanguage S) (M : S → Type w) where
-funMap : ∀ {σ t}, L.Functions σ t → σ.Interpret M  → M t := by
+funMap : ∀ {σ t}, L.Functions σ t → M [^] σ → M t := by
     exact fun {σ} => fun {t} => isEmptyElim
-RelMap : ∀ {σ}, L.Relations σ → σ.Interpret M  → Prop := by
+RelMap : ∀ {σ}, L.Relations σ → M [^] σ  → Prop := by
     exact fun {σ} => isEmptyElim
 
 @[ext]
 class MSStructure' {S} (L : MSLanguage S) (M : S → Type w) where
-funMap : ∀ {σ t}, L.Functions σ t → σ.Interpret M → M t := by
+funMap : ∀ {σ t}, L.Functions σ t → M [^] σ → M t := by
     exact fun {σ} => fun {t} => isEmptyElim
-RelMap : ∀ {σ}, L.Relations σ → σ.Interpret M  → Prop := by
+RelMap : ∀ {σ}, L.Relations σ → M [^] σ  → Prop := by
     exact fun {σ} => isEmptyElim
 
 end StructureDefs
@@ -215,7 +193,7 @@ structure Hom where
   /-- The underlying function of a homomorphism of structures -/
   toFun : (t: S) → M t → N t
   /-- The homomorphism commutes with the interpretations of the function symbols -/
-  map_fun' : ∀ {σ t} (f : L.Functions σ t) (x : σ.Interpret M ),
+  map_fun' : ∀ {σ t} (f : L.Functions σ t) (x : M [^] σ ),
     toFun t (funMap f x) = funMap f (toFun <$>ₛ x) := by
     intros; trivial
   /-- The homomorphism sends related elements to related elements -/
@@ -302,7 +280,7 @@ theorem nonempty_of_nonempty_constants {t} [h : Nonempty (L.Constants t)] : None
 class HomClass (L : outParam (MSLanguage S)) (F : Type*) (M N : outParam S → Type*)
   [L.MSStructure M] [L.MSStructure N] [DFunLike F S (fun t => M t → N t)] where
 
-  map_fun : ∀ (φ : F) {σ t} (f : L.Functions σ t) (x : σ.Interpret M ),
+  map_fun : ∀ (φ : F) {σ t} (f : L.Functions σ t) (x : M [^] σ ),
               φ t (funMap f x) = funMap f (φ <$>ₛ x)
 
   map_rel : ∀ (φ : F) {σ} (r : L.Relations σ) (x),
@@ -313,7 +291,7 @@ class HomClass (L : outParam (MSLanguage S)) (F : Type*) (M N : outParam S → T
 class StrongHomClass (L : outParam (MSLanguage S)) (F : Type*) (M N : outParam S -> Type*)
   [L.MSStructure M] [L.MSStructure N] [DFunLike F S (fun t => M t → N t)] where
 
-  map_fun : ∀ (φ : F) {σ t} (f : L.Functions σ t) (x : σ.Interpret M ),
+  map_fun : ∀ (φ : F) {σ t} (f : L.Functions σ t) (x : M [^] σ ),
               φ t (funMap f x) = funMap f (φ <$>ₛ x)
 
   map_rel : ∀ (φ : F) {σ} (r : L.Relations σ) (x),
@@ -352,7 +330,6 @@ attribute [inherit_doc MSFirstOrder.MSLanguage.Hom.map_rel']
   MSFirstOrder.MSLanguage.StrongHomClass.map_rel MSFirstOrder.MSLanguage.Equiv.map_rel'
 
 namespace Hom
-open SortedTuple
 
 instance instDFunLike : DFunLike (M →[L] N) S (fun t => M t → N t) where
   coe := Hom.toFun
@@ -372,7 +349,7 @@ theorem toFun_eq_coe {t} {f : M →[L] N} : f.toFun t = (f t : M t → N t) :=
   rfl
 
 @[simp]
-theorem map_fun (φ : M →[L] N) {σ t} (f : L.Functions σ t) (x : σ.Interpret M ) :
+theorem map_fun (φ : M →[L] N) {σ t} (f : L.Functions σ t) (x : M [^] σ ) :
     φ t (funMap f x) = funMap f (φ <$>ₛ x) :=
   HomClass.map_fun φ f x
 
@@ -381,7 +358,7 @@ theorem map_constants {t} (φ : M →[L] N) (c : L.Constants t) : (φ t) c = c :
   HomClass.map_constants φ c
 
 @[simp]
-theorem map_rel (φ : M →[L] N) {σ} (r : L.Relations σ) (x : σ.Interpret M ) :
+theorem map_rel (φ : M →[L] N) {σ} (r : L.Relations σ) (x : M [^] σ ) :
     RelMap r x → RelMap r (φ <$>ₛ x) :=
   HomClass.map_rel φ r x
 
@@ -401,10 +378,11 @@ variable {S : Type z} (L : MSLanguage S) (M : S → Type w) [L.MSStructure M]
 def id : M →[L] M where
   toFun t m := m
   map_fun' := by
-    intro _ _ _ xs; simp
+    intro _ _ _ xs
+    simp
   map_rel' := by
     intro  _ _ xs r
-    simp only [SortedTuple.map_id']
+    rw [Interpret.map_id']
     exact r
 
 variable {L} {M}
@@ -434,9 +412,9 @@ variable {S : Type z} {L : MSLanguage S}
 @[trans]
 def comp (hnp : N →[L] P) (hmn : M →[L] N) : M →[L] P where
   toFun := hnp ∘ₛ hmn
-  map_fun' f xs := by simp [SortedTuple.comp_map]
+  map_fun' f xs := by simp [Interpret.comp_map]
   map_rel' r xs h :=  by
-    rw [SortedTuple.comp_map]
+    rw [Interpret.comp_map]
     exact (map_rel _ _ _ (map_rel _ _ _ h))
 
 @[simp]
@@ -500,8 +478,8 @@ instance strongHomClass : StrongHomClass L (M ↪[L] N) M N where
   map_rel := map_rel'
 
 @[simp]
-theorem map_fun (φ : M ↪[L] N) {t : S} {σ : ProdExpr S}
-    (f : L.Functions σ t) (x : σ.Interpret M) :
+theorem map_fun (φ : M ↪[L] N) {t : S} {σ : Signature S}
+    (f : L.Functions σ t) (x : M [^] σ) :
     φ t (funMap f x) = funMap f (φ <$>ₛ x) :=
   HomClass.map_fun φ f x
 
@@ -510,8 +488,8 @@ theorem map_constants {t} (φ : M ↪[L] N) (c : L.Constants t) : φ t c = c :=
   HomClass.map_constants φ c
 
 @[simp]
-theorem map_rel (φ : M ↪[L] N) {σ : ProdExpr S} (r : L.Relations σ) (x : σ.Interpret M) :
-    RelMap r (φ <$>ₛ x) ↔ RelMap r x:=
+theorem map_rel (φ : M ↪[L] N) {σ : Signature S} (r : L.Relations σ) (x : M [^] σ) :
+    RelMap r (φ <$>ₛ x) ↔ RelMap r x :=
   StrongHomClass.map_rel φ r x
 
 /-- A first-order embedding is also a first-order homomorphism. -/
@@ -568,7 +546,7 @@ def refl : M ↪[L] M where
     simpa using h
   map_fun' := by
     intros σ t f x
-    simp only [id_eq, SortedTuple.map_id]
+    simp only [id_eq, Interpret.map_id]
   map_rel' := by
     intros σ r x
     change RelMap r ((fun t (y : M t) => y) <$>ₛ x) ↔ RelMap r x
@@ -594,10 +572,10 @@ def comp (hnp : N ↪[L] P) (hmn : M ↪[L] N) : M ↪[L] P where
     exact (hnp.injective t).comp (hmn.injective t)
   map_fun' := by
     intros
-    simp only [Function.comp_apply, map_fun, SortedTuple.comp_map]
+    simp only [Function.comp_apply, map_fun, Interpret.comp_map]
   map_rel' := by
     intros σ r x
-    simp only [SortedTuple.comp_map, map_rel]
+    simp only [Interpret.comp_map, map_rel]
 
 
 @[simp]
@@ -714,8 +692,8 @@ def symm (φ : M ≃[L] N) : N ≃[L] M :=
       have h := φ.map_fun' σ t f (φ.invFun <$>ₛ x)
       -- Simplify the composed sorted tuple
       have hx : (φ.toFun <$>ₛ (φ.invFun <$>ₛ x)) = x := by
-        rw[← SortedTuple.comp_map]
-        simp [Fam.MSEquiv.to_comp, SortedTuple.map_id]
+        rw[← Interpret.comp_map]
+        simp [Fam.MSEquiv.to_comp, Interpret.map_id]
       -- Right side (image of the target expression)
       have hRight : φ.toFun t (funMap f (φ.invFun <$>ₛ x)) = funMap f x := by
         simpa [hx]
@@ -730,8 +708,8 @@ def symm (φ : M ≃[L] N) : N ≃[L] M :=
       -- Start from φ.map_rel' applied to (φ.invFun <$>ₛ x)
       have h := φ.map_rel' σ r (φ.invFun <$>ₛ x)
       have hx : (φ.toFun <$>ₛ (φ.invFun <$>ₛ x)) = x := by
-        rw [← SortedTuple.comp_map]
-        simp only [Fam.MSEquiv.to_comp, SortedTuple.map_id]
+        rw [← Interpret.comp_map]
+        simp only [Fam.MSEquiv.to_comp, Interpret.map_id]
       -- Rewrite to get RelMap r x ↔ RelMap r (φ.invFun <$>ₛ x)
       have h' : RelMap r x ↔ RelMap r (φ.invFun <$>ₛ x) := by
         simpa [hx] using h
@@ -763,8 +741,8 @@ theorem symm_apply_apply {t} (f : M ≃[L] N) (a : M t) : f.symm t (f t a) = a :
   exact f.left_inv' t a
 
 @[simp]
-theorem map_fun {t : S} (φ : M ≃[L] N) {σ : ProdExpr S}
-    (f : L.Functions σ t) (x : σ.Interpret M) :
+theorem map_fun {t : S} (φ : M ≃[L] N) {σ : Signature S}
+    (f : L.Functions σ t) (x : M [^] σ) :
     φ t (funMap f x) = funMap f (φ <$>ₛ x) :=
   HomClass.map_fun φ f x
 
@@ -773,7 +751,7 @@ theorem map_constants {t : S} (φ : M ≃[L] N) (c : L.Constants t) : φ t c = c
   HomClass.map_constants φ c
 
 @[simp]
-theorem map_rel (φ : M ≃[L] N) {σ : ProdExpr S} (r : L.Relations σ) (x : σ.Interpret M) :
+theorem map_rel (φ : M ≃[L] N) {σ : Signature S} (r : L.Relations σ) (x : M [^] σ) :
     RelMap r (φ <$>ₛ x) ↔ RelMap r x :=
   StrongHomClass.map_rel φ r x
 
@@ -831,11 +809,11 @@ def refl : M ≃[L] M where
     intro t x; rfl
   map_fun' := by
     intros σ t f x
-    rw [SortedTuple.map_id]
+    rw [Interpret.map_id]
     rfl
   map_rel' := by
     intros σ r x
-    rw [SortedTuple.map_id]
+    rw [Interpret.map_id]
 
 
 variable {L} {M}
@@ -865,14 +843,14 @@ def comp (hnp : N ≃[L] P) (hmn : M ≃[L] N) : M ≃[L] P :=
       hnp t (hmn t (funMap f x))
           = hnp t (funMap f (hmn <$>ₛ x)) := by simp
       _   = funMap f (hnp <$>ₛ (hmn <$>ₛ x)) := by simp
-      _   = funMap f ((hnp ∘ₛ hmn) <$>ₛ x) := by rw [SortedTuple.comp_map]
+      _   = funMap f ((hnp ∘ₛ hmn) <$>ₛ x) := by rw [Interpret.comp_map]
 
   map_rel' := by
     intro σ r x
     -- compose the equivalences from hnp and hmn
     have h₁ := hnp.map_rel' σ r (hmn.toFun <$>ₛ x)
     have h₂ := hmn.map_rel' σ r x
-    rw[← SortedTuple.comp_map] at h₁
+    rw[← Interpret.comp_map] at h₁
     rw[← h₂,← h₁]
     rfl
     }
@@ -1011,22 +989,22 @@ instance sumStructure : (L₁.sum L₂).MSStructure S' where
 variable {L₁ L₂ : MSLanguage S} {S'} [L₁.MSStructure S'] [L₂.MSStructure S']
 
 @[simp]
-theorem funMap_sumInl {t : S} {σ : ProdExpr S} (f : L₁.Functions σ t) :
+theorem funMap_sumInl {t : S} {σ : Signature S} (f : L₁.Functions σ t) :
     @funMap S (L₁.sum L₂) S' _ σ t (Sum.inl f) = funMap f :=
   rfl
 
 @[simp]
-theorem funMap_sumInr {t : S} {σ : ProdExpr S} (f : L₂.Functions σ t) :
+theorem funMap_sumInr {t : S} {σ : Signature S} (f : L₂.Functions σ t) :
     @funMap S (L₁.sum L₂) S' _ σ t (Sum.inr f) = funMap f :=
   rfl
 
 @[simp]
-theorem relMap_sumInl {σ : ProdExpr S} (R : L₁.Relations σ) :
+theorem relMap_sumInl {σ : Signature S} (R : L₁.Relations σ) :
     @RelMap S (L₁.sum L₂) S' _ σ (Sum.inl R) = RelMap R :=
   rfl
 
 @[simp]
-theorem relMap_sumInr {σ : ProdExpr S} (R : L₂.Relations σ) :
+theorem relMap_sumInr {σ : Signature S} (R : L₂.Relations σ) :
     @RelMap S (L₁.sum L₂) S' _ σ (Sum.inr R) = RelMap R :=
   rfl
 
@@ -1132,9 +1110,9 @@ def inducedStructureEquiv (e : M ≃ₛ N) : @MSLanguage.Equiv S L M N _ (induce
   exact
   { e with
     map_fun' := @fun σ t f x => by
-      simp [inducedStructure, Fam.MSEquiv.symm, ← SortedTuple.comp_map, Fam.MSEquiv.inv_comp]
+      simp [inducedStructure, Fam.MSEquiv.symm, ← Interpret.comp_map, Fam.MSEquiv.inv_comp]
     map_rel' := @fun σ  r x => by
-      simp [inducedStructure, Fam.MSEquiv.symm, ← SortedTuple.comp_map, Fam.MSEquiv.inv_comp] }
+      simp [inducedStructure, Fam.MSEquiv.symm, ← Interpret.comp_map, Fam.MSEquiv.inv_comp] }
 
 @[simp]
 theorem toEquiv_inducedStructureEquiv (e : M ≃ₛ N) :
