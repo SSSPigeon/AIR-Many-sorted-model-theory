@@ -21,10 +21,6 @@ open Cardinal
 namespace MSFirstOrder
 open Signature
 
-/-Note: building on top of lists is technically more convenient.
-  It would also be possible to build a language on top of a "ListLike",
-  but then one should pass the choice of Listlike functor explicitly
-  to any multisorted language L -/
 section LanguageDefs
 @[ext]
 structure MSLanguage (S : Type z) where
