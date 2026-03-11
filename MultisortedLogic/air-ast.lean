@@ -29,7 +29,7 @@ inductive airFunc : List AirSorts → AirSorts → Type
   -- air-ast :: Const
   | True : airFunc [] Bool
   | False : airFunc [] Bool
-  | Nat : (i : String) → airFunc [] Poly
+  | Nat : (i : String) → airFunc [] Int
   | BitVector : (bits : List Nat) → (width: UInt32) → airFunc [] (BitVec width)
 
   -- air-ast :: Binop
@@ -206,7 +206,7 @@ open SortedTuple
 variable {P T F : Type}
 
 variable [S : air_ast.MSStructure (AirCarrier P T F)]
-variable (myAxioms : air_ast.Theory)
+
 
 open SortedTuple airFunc
 
@@ -214,12 +214,16 @@ class CompatibleAir (P T F : Type) extends air_ast.MSStructure (AirCarrier P T F
   -- Pin down the Bool/Int operations:
   funMap_true  : ∀ xs, funMap airFunc.True xs = true
   funMap_false : ∀ xs, funMap airFunc.False xs = false
+  funMap_nat   : ∀ (i : String) xs, funMap (airFunc.Nat i) xs = i.toInt?.getD 0
   funMap_not   : ∀ xs, funMap airFunc.Not xs = !xs.eval₁
   funMap_add   : ∀ xs, funMap airFunc.Add xs = xs.eval₂₁ + xs.eval₂₂
   funMap_sub   : ∀ xs, funMap airFunc.Sub xs = xs.eval₂₁ - xs.eval₂₂
   funMap_mul   : ∀ xs, funMap airFunc.Mul xs = xs.eval₂₁ * xs.eval₂₂
   funMap_eq    : ∀ xs, funMap airFunc.Eq xs = decide (xs.eval₂₁ = xs.eval₂₂)
   funMap_le    : ∀ xs, funMap airFunc.Le xs = decide (xs.eval₂₁ ≤ xs.eval₂₂)
+  funMap_ge    : ∀ xs, funMap airFunc.Ge xs = decide (xs.eval₂₁ ≥ xs.eval₂₂)
+  funMap_lt    : ∀ xs, funMap airFunc.Lt xs = decide (xs.eval₂₁ < xs.eval₂₂)
+  funMap_gt    : ∀ xs, funMap airFunc.Gt xs = decide (xs.eval₂₁ > xs.eval₂₂)
   funMap_implies : ∀ xs, funMap airFunc.Implies xs = (!xs.eval₂₁ || xs.eval₂₂)
   -- Leave Poly/TYPE/Fun operations abstract — axioms constrain them
 
@@ -235,7 +239,7 @@ class CompatibleAir (P T F : Type) extends air_ast.MSStructure (AirCarrier P T F
 
 -- Choice 2: Prove that myAxioms ⊢ e1 = e2.
 -- -/
-
+variable (myAxioms : air_ast.Theory)
 
 
 end MSLanguage
