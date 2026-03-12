@@ -103,51 +103,6 @@ def air_ast : MSLanguage AirSorts := {
   Relations := fun _ => Empty
 }
 
-open airFunc
-
-abbrev addZFunc : air_ast.Functions [Int, Int] Int := Add
-abbrev subZFunc : air_ast.Functions [Int, Int] Int := Sub
-abbrev mulZFunc : air_ast.Functions [Int, Int] Int := Mul
-abbrev divZFunc : air_ast.Functions [Int, Int] Int := EuclideanDiv
-abbrev modZFunc : air_ast.Functions [Int, Int] Int := EuclideanMod
-
-abbrev andBFunc (n : Nat) : air_ast.Functions (List.replicate n Bool) Bool := And n
-
-instance {α : AirSorts → Type*} : Add (MSLanguage.air_ast.Term α Int) :=
-{ add := addZFunc.apply₂ }
-
-theorem addZ_def (α : AirSorts → Type*) (t₁ t₂ : MSLanguage.air_ast.Term α Int) :
-    t₁ + t₂ = addZFunc.apply₂ t₁ t₂ := rfl
-
-instance {α : AirSorts → Type*} : Sub (MSLanguage.air_ast.Term α Int) :=
-{ sub := subZFunc.apply₂ }
-
-theorem subZ_def (α : AirSorts → Type*) (t₁ t₂ : MSLanguage.air_ast.Term α Int) :
-    t₁ - t₂ = subZFunc.apply₂ t₁ t₂ := rfl
-
-instance {α : AirSorts → Type*} : Mul (MSLanguage.air_ast.Term α Int) :=
-{ mul := mulZFunc.apply₂ }
-
-theorem mulZ_def (α : AirSorts → Type*) (t₁ t₂ : MSLanguage.air_ast.Term α Int) :
-    t₁ * t₂ = mulZFunc.apply₂ t₁ t₂ := rfl
-
-instance {α : AirSorts → Type*} : Div (MSLanguage.air_ast.Term α Int) :=
-{ div := divZFunc.apply₂ }
-
-theorem divZ_def (α : AirSorts → Type*) (t₁ t₂ : MSLanguage.air_ast.Term α Int) :
-    t₁ / t₂ = divZFunc.apply₂ t₁ t₂ := rfl
-
-instance {α : AirSorts → Type*} : Mod (MSLanguage.air_ast.Term α Int) :=
-{ mod := modZFunc.apply₂ }
-
-theorem modZ_def (α : AirSorts → Type*) (t₁ t₂ : MSLanguage.air_ast.Term α Int) :
-    t₁ % t₂ = modZFunc.apply₂ t₁ t₂ := rfl
-
-instance {α : AirSorts → Type*} : AndOp (MSLanguage.air_ast.Term α Bool) :=
-{ and := (andBFunc 2).apply₂ }
-
--- theorem andB_def (α : AirSorts → Type*) (n : Nat) (t₁ t₂ : MSLanguage.air_ast.Term α Bool) :
---     (andBFunc n).apply₂ t₁ t₂ = := rfl
 
 /-- Making this an abbrev instead of a def makes Lean automatically unfold this,
 which helps with typeclass inference -/
@@ -188,43 +143,47 @@ For the n-ary `And`, `Or`, `Xor` we need to fold over a `SortedTuple` whose
 signature is `List.replicate n Bool`. We extract elements via `toMap` and fold.
 -/
 
-open SortedTuple
--- TODO
---/-- Fold a binary Boolean operation over a SortedTuple of n Bools. -/
--- def foldBools (op : Bool → Bool → Bool) (init : Bool)
---     {n : Nat} (xs : SortedTuple (List.replicate n AirSorts.Bool) AirCarrier) : Bool :=
---   let len := (List.replicate n AirSorts.Bool).length
---   -- Each element has type `AirCarrier ((List.replicate n Bool).get i) = AirCarrier Bool = Bool`
---   -- We fold over `Fin len` using the map.
---   Fin.foldl len (fun acc i =>
---     have h : (List.replicate n AirSorts.Bool).get (Fin.cast (by simp; sorry) i) = AirSorts.Bool := by
---       simp
---     op acc (h ▸ xs.toMap (Fin.cast (by simp) i))
---   ) init
-
+open SortedTuple airFunc
 
 variable {P T F : Type}
 
 variable [S : air_ast.MSStructure (AirCarrier P T F)]
-
-
-open SortedTuple airFunc
+-- TODO
+/-- Fold a binary Boolean operation over a SortedTuple of n Bools. -/
+def foldBools (op : Bool → Bool → Bool) (init : Bool)
+    {n : Nat} (xs : SortedTuple (List.replicate n AirSorts.Bool) (AirCarrier P T F)) : Bool :=
+  List.foldl op init <| List.ofFn fun (i : Fin n) =>
+    let i' : Fin (List.replicate n AirSorts.Bool).length := ⟨i.val, by simp⟩
+    have h : (List.replicate n AirSorts.Bool).get i' = AirSorts.Bool := by simp
+    cast (congrArg (AirCarrier P T F) h) (xs.toMap i')
 
 class CompatibleAir (P T F : Type) extends air_ast.MSStructure (AirCarrier P T F) where
   -- Pin down the Bool/Int operations:
   funMap_true  : ∀ xs, funMap airFunc.True xs = true
   funMap_false : ∀ xs, funMap airFunc.False xs = false
   funMap_nat   : ∀ (i : String) xs, funMap (airFunc.Nat i) xs = i.toInt?.getD 0
+  --TODO: funMap_bitvec
+
+  funMap_implies : ∀ xs, funMap airFunc.Implies xs = (!xs.eval₂₁ || xs.eval₂₂)
   funMap_not   : ∀ xs, funMap airFunc.Not xs = !xs.eval₁
-  funMap_add   : ∀ xs, funMap airFunc.Add xs = xs.eval₂₁ + xs.eval₂₂
-  funMap_sub   : ∀ xs, funMap airFunc.Sub xs = xs.eval₂₁ - xs.eval₂₂
-  funMap_mul   : ∀ xs, funMap airFunc.Mul xs = xs.eval₂₁ * xs.eval₂₂
+
   funMap_eq    : ∀ xs, funMap airFunc.Eq xs = decide (xs.eval₂₁ = xs.eval₂₂)
   funMap_le    : ∀ xs, funMap airFunc.Le xs = decide (xs.eval₂₁ ≤ xs.eval₂₂)
   funMap_ge    : ∀ xs, funMap airFunc.Ge xs = decide (xs.eval₂₁ ≥ xs.eval₂₂)
   funMap_lt    : ∀ xs, funMap airFunc.Lt xs = decide (xs.eval₂₁ < xs.eval₂₂)
   funMap_gt    : ∀ xs, funMap airFunc.Gt xs = decide (xs.eval₂₁ > xs.eval₂₂)
-  funMap_implies : ∀ xs, funMap airFunc.Implies xs = (!xs.eval₂₁ || xs.eval₂₂)
+  funMap_euclideanDiv : ∀ xs, funMap airFunc.EuclideanDiv xs = xs.eval₂₁ / xs.eval₂₂
+  funMap_euclideanMod : ∀ xs, funMap airFunc.EuclideanMod xs = xs.eval₂₁ % xs.eval₂₂
+
+
+  funMap_add   : ∀ xs, funMap airFunc.Add xs = xs.eval₂₁ + xs.eval₂₂
+  funMap_sub   : ∀ xs, funMap airFunc.Sub xs = xs.eval₂₁ - xs.eval₂₂
+  funMap_mul   : ∀ xs, funMap airFunc.Mul xs = xs.eval₂₁ * xs.eval₂₂
+
+  funMap_and   : ∀ (n : Nat) xs, funMap (airFunc.And n) xs = foldBools (· && ·) true xs
+  funMap_or    : ∀ (n : Nat) xs, funMap (airFunc.Or n) xs = foldBools (· || ·) false xs
+  funMap_xor   : ∀ (n : Nat) xs, funMap (airFunc.Xor n) xs = foldBools (· ^^ ·) false xs
+
   -- Leave Poly/TYPE/Fun operations abstract — axioms constrain them
 
 -- /--

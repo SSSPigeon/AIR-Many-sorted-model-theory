@@ -63,7 +63,6 @@ inductive airFunc : List AirSorts → AirSorts → Type
   -- | BitSignExtend (fr: UInt32)
 
   -- air-ast :: MultiOp
-  -- TODO
   | And : (n : Nat) → airFunc (List.replicate n Bool) Bool
   | Or : (n : Nat) → airFunc (List.replicate n Bool) Bool
   | Xor : (n : Nat) → airFunc (List.replicate n Bool) Bool
