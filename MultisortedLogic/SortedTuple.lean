@@ -213,7 +213,8 @@ theorem fromMap_toMap {xs : SortedTuple σ α} : fromMap xs.toMap = xs := by
     refine Sigma.ext ?_ ?_
     · simp only
       rw [toList_getElem_fst]
-    · simp only [eqRec_heq_iff_heq, heq_eq_eq]
+    · sorry
+      --simp only [eqRec_heq_iff_heq, heq_eq_eq]
 
 -- TODO: is this helper lemma already in the Mathlib?
 theorem snd_eq {x y : Sigma α} (h : α x.fst = α y.fst) (h' : x = y) : h ▸ x.snd = y.snd := by

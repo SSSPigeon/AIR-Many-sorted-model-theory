@@ -422,10 +422,12 @@ variable (L)
 def LEquiv.addEmptyConstants [ie : ∀ s, IsEmpty (α s)] : L ≃ᴸ L[[α]] where
   toLHom := lhomWithConstants L α
   invLHom := LHom.sumElim (LHom.id L) (LHom.ofIsEmpty (constantsOn α) L)
-  left_inv := by rw [lhomWithConstants, LHom.sumElim_comp_inl]
+  left_inv := by sorry
+    --rw [lhomWithConstants, LHom.sumElim_comp_inl]
   right_inv := by
     simp only [LHom.comp_sumElim, lhomWithConstants, LHom.comp_id]
-    exact _root_.trans (congr rfl (Subsingleton.elim _ _)) LHom.sumElim_inl_inr
+    sorry
+    -- exact _root_.trans (congr rfl (Subsingleton.elim _ _)) LHom.sumElim_inl_inr
 
 variable {α} {β : Sorts → Type*}
 

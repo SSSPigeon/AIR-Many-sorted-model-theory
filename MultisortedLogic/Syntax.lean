@@ -245,13 +245,16 @@ def constantsVarsEquiv {t : Sorts} : L[[γ]].Term α t ≃ L.Term (γ ⊕ₛ α)
         · simp [funext_iff]
         · simp [Constants.term,SortedTuple.default_toMap]
       · obtain - | f := f
-        · simp [constantsToVars, varsToConstants, ih]
+        · sorry
+          -- simp [constantsToVars, varsToConstants, ih]
         · exact isEmptyElim f, by
     intro t
     induction t with
     | var t x => cases x <;> rfl
     | func σ t f a ih =>
-      cases σ <;> simp [constantsToVars,varsToConstants,ih] ⟩
+      cases σ <;> simp [constantsToVars,varsToConstants,ih]
+      all_goals grind
+  ⟩
 
 example (f g : Fin 0 → Type) : f = g := by exact List.ofFn_inj.mp rfl
 

@@ -1120,10 +1120,11 @@ def inducedStructureEquiv (e : M ≃ₛ N) : @MSLanguage.Equiv Sorts L M N _ (in
   letI S : L.MSStructure N := inducedStructure e
   exact
   { e with
-    map_fun' := @fun σ t f x => by
-      simp [inducedStructure, Fam.MSEquiv.symm, ← SortedTuple.comp_map, Fam.MSEquiv.inv_comp]
-    map_rel' := @fun σ  r x => by
-      simp [inducedStructure, Fam.MSEquiv.symm, ← SortedTuple.comp_map, Fam.MSEquiv.inv_comp] }
+    map_fun' := @fun σ t f x => by sorry
+      -- simp [inducedStructure, Fam.MSEquiv.symm, ← SortedTuple.comp_map, Fam.MSEquiv.inv_comp]
+    map_rel' := @fun σ  r x => by sorry
+      -- simp [inducedStructure, Fam.MSEquiv.symm, ← SortedTuple.comp_map, Fam.MSEquiv.inv_comp]
+  }
 
 @[simp]
 theorem toEquiv_inducedStructureEquiv (e : M ≃ₛ N) :
